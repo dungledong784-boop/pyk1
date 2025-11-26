@@ -19,7 +19,10 @@ import {
   AlertCircle,
   Copy,
   Zap,
-  Fingerprint
+  Fingerprint,
+  Download,
+  Check,
+  DownloadCloud
 } from 'lucide-react';
 import { Tab, LogEntry, AppStats } from './types';
 import { MOCK_DOMAINS_ALLOWED, MOCK_DOMAINS_BLOCKED, DNS_PROVIDERS } from './constants';
@@ -46,6 +49,12 @@ const App: React.FC = () => {
   const [inputKey, setInputKey] = useState('');
   const [authError, setAuthError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Download Simulation State
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadComplete, setDownloadComplete] = useState(false);
 
   // Initialize Key
   useEffect(() => {
@@ -58,6 +67,10 @@ const App: React.FC = () => {
 
   const handleLogin = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
+    if (!agreedToTerms) {
+       alert("请先阅读并同意用户协议与隐私政策");
+       return;
+    }
     if (inputKey.trim().toUpperCase() === activationKey) {
       setIsAuthenticated(true);
       setAuthError(false);
@@ -66,13 +79,35 @@ const App: React.FC = () => {
       // Reset error after animation
       setTimeout(() => setAuthError(false), 2000);
     }
-  }, [inputKey, activationKey]);
+  }, [inputKey, activationKey, agreedToTerms]);
 
   const copyToClipboard = () => {
     if (!activationKey) return;
     navigator.clipboard.writeText(activationKey);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const startDownloadSimulation = () => {
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    setDownloadComplete(false);
+    
+    const interval = setInterval(() => {
+      setDownloadProgress(prev => {
+        const next = prev + Math.random() * 5 + 1; // Random increment
+        if (next >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsDownloading(false);
+            setDownloadComplete(true);
+            setTimeout(() => setDownloadComplete(false), 5000); // Hide success msg after 5s
+          }, 800);
+          return 100;
+        }
+        return next;
+      });
+    }, 100);
   };
 
   // Simulate Traffic
@@ -176,6 +211,19 @@ const App: React.FC = () => {
               </div>
             </div>
 
+            {/* Terms Checkbox */}
+            <div className="flex items-center space-x-2 px-1">
+                <div 
+                  onClick={() => setAgreedToTerms(!agreedToTerms)}
+                  className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${agreedToTerms ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 bg-slate-900'}`}
+                >
+                   {agreedToTerms && <Check size={10} className="text-white" />}
+                </div>
+                <span className="text-xs text-slate-400">
+                   我已阅读并同意 <a href="#" className="text-emerald-400 hover:underline">用户协议</a> 与 <a href="#" className="text-emerald-400 hover:underline">隐私政策</a>
+                </span>
+            </div>
+
             {authError && (
               <div className="flex items-center justify-center space-x-2 text-red-400 text-xs px-1 animate-pulse bg-red-500/10 py-2 rounded-lg border border-red-500/20">
                 <AlertCircle size={12} />
@@ -223,7 +271,7 @@ const App: React.FC = () => {
             </div>
             
             <p className="text-[10px] text-slate-600 mt-6 font-mono opacity-50">
-              安全加密连接 • 256位数据保护
+              安全加密连接 • 本地数据处理 • 无隐私上传
             </p>
           </div>
         </div>
@@ -327,6 +375,65 @@ const App: React.FC = () => {
   const renderSettings = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out pb-24">
       
+      {/* Download App Simulation Section */}
+      <div className="glass-panel rounded-3xl overflow-hidden relative border border-emerald-500/30">
+        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+          <DownloadCloud size={80} className="text-emerald-500" />
+        </div>
+        <div className="p-4 border-b border-white/5 bg-white/5 relative z-10">
+          <h3 className="font-semibold text-white flex items-center text-sm">
+            <Download size={16} className="mr-2 text-emerald-400" />
+            客户端下载
+          </h3>
+        </div>
+        <div className="p-5 relative z-10 space-y-4">
+           <p className="text-sm text-slate-300">
+             下载最新版 Android 客户端 (.apk)，获取更稳定的后台防护能力。
+           </p>
+           
+           <button 
+             onClick={startDownloadSimulation}
+             disabled={isDownloading || downloadComplete}
+             className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center space-x-2 border border-white/10 hover:border-emerald-400/50 shadow-lg shadow-emerald-900/20 disabled:opacity-70 disabled:cursor-not-allowed"
+           >
+             {isDownloading ? (
+               <span className="flex items-center"><Activity className="animate-spin mr-2" size={18} /> 连接服务器...</span>
+             ) : downloadComplete ? (
+               <span className="flex items-center text-emerald-100"><CheckCircle2 className="mr-2" size={18} /> 下载完成</span>
+             ) : (
+               <span className="flex items-center"><DownloadCloud className="mr-2" size={18} /> 下载 APK (v1.0.0)</span>
+             )}
+           </button>
+           
+           {/* Progress Bar Simulation */}
+           {isDownloading && (
+             <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+               <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>PureGuard_v1.0.apk</span>
+                  <span>{Math.floor(downloadProgress)}%</span>
+               </div>
+               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                 <div 
+                   className="h-full bg-emerald-500 transition-all duration-100 ease-out"
+                   style={{ width: `${downloadProgress}%` }}
+                 ></div>
+               </div>
+               <p className="text-[10px] text-slate-500 text-center animate-pulse">正在从高速服务器下载...</p>
+             </div>
+           )}
+
+           {downloadComplete && (
+             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-start space-x-3 animate-in fade-in slide-in-from-top-2">
+               <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={16} />
+               <div className="text-xs text-slate-300">
+                 <p className="font-bold text-emerald-400 mb-1">下载成功！</p>
+                 <p>文件已保存至手机。如浏览器拦截安装，请在文件管理器中找到 APK 点击安装。</p>
+               </div>
+             </div>
+           )}
+        </div>
+      </div>
+
       {/* DNS Settings */}
       <div className="glass-panel rounded-3xl overflow-hidden">
         <div className="p-4 border-b border-white/5 bg-white/5">
@@ -469,7 +576,7 @@ const App: React.FC = () => {
         )}
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto px-5 pt-4 scrollbar-hide relative z-10">
+        <main className="flex-1 overflow-y-auto px-5 pt-4 scrollbar-hide relative z-10 pb-safe-bottom">
           {activeTab === Tab.HOME && renderHome()}
           {activeTab === Tab.LOGS && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out pb-24">
@@ -496,7 +603,7 @@ const App: React.FC = () => {
         </main>
 
         {/* Floating Dock Navigation */}
-        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center pointer-events-none">
+        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center pointer-events-none pb-safe-bottom">
           <nav className="bg-[#0f172a]/80 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center space-x-8 shadow-2xl pointer-events-auto transform transition-transform hover:scale-[1.02]">
             
             <button 
